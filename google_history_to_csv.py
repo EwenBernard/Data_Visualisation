@@ -1,11 +1,10 @@
 import json, os
 import csv
-import pandas as pd
 
 header = ['StartLocationLat', 'StartLocationLon', 'EndLocationLat', 'EndLocationLon', 'StartTime', 'EndTime', 'Distance', 'ActivityType']
 i = 0
-path = "C:/Users/ebern/Desktop/Notebook/Takeout/Historique des positions/Semantic Location History"
-extractPath = "C:/Users/ebern/Desktop/Notebook/Extracted_Google_Maps_Data"
+path = "C:/Users/ebern/Desktop/GitHub/Data_Visualisation/Takeout/Historique des positions/Semantic Location History"
+extractPath = "C:/Users/ebern/Desktop/GitHub/Data_Visualisation/Extracted_Meline_Google_Maps_Data"
 
 if not os.path.exists(extractPath):
     os.mkdir(extractPath)
