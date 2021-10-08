@@ -303,4 +303,4 @@ st.write("Average distance travelled per trip in meters :      Before August 201
 #st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
 #st.write(year['2020']['APRIL']["Distance"].mean())
 
-# draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
+draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
