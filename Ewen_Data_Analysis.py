@@ -219,7 +219,6 @@ def distance_mean(years, month_list):
                 if type(year[value][month]) is not list:
                     if not math.isnan(year[value][month]['Distance'].mean()):
                         temp.append(year[value][month]['Distance'].mean())
-    print(temp)
     return sum(temp) / len(temp)
 
 
@@ -289,18 +288,28 @@ def university_part():
     st.write("My places of travel remain however almost the same, my friends still living in the same places. You can "
              "see a line going from my house to the school. This line represents the trip by bus + rer B that I make "
              "every morning and every evening to go to school.")
+    st.write("Average distance travelled per trip in meters :")
+    st.write("Before August 2018:",
+             int(distance_mean(['2017', '2018'], ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY'])))
+    st.write("After August 2018:", int(distance_mean(['2018', '2019'],
+                                                     ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])))
+    st.write("There is a clear increase in the average distance travelled per trip. "
+             "This is due to the fact that my school is much further from my home than my high school")
 
 
-intro()
-high_school_part()
-university_part()
+def covid_pandemic():
+    st.title("Covid Pandemic")
+    st.write("By the end of 2019, the covid-19 virus affects the entire planet. We observe more and more contamination "
+             "until the first containment that lasted from March 17 to May 11, 2020 in France. ")
+    st.write("")
+    draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
 
-st.write("Average distance travelled per trip in meters :      Before August 2018",
-         int(distance_mean(['2017', '2018'], ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY'])),
-         "After August 2018:", int(distance_mean(['2018', '2019'],
-                                             ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])))
+#intro()
+#high_school_part()
+#university_part()
+covid_pandemic()
 
 #st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
 #st.write(year['2020']['APRIL']["Distance"].mean())
 
-draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
+
