@@ -301,12 +301,16 @@ def covid_pandemic():
     st.title("Covid Pandemic")
     st.write("By the end of 2019, the covid-19 virus affects the entire planet. We observe more and more contamination "
              "until the first containment that lasted from March 17 to May 11, 2020 in France. ")
-    st.write("")
     draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
+    st.write("the only places I went during this period were the supermarkets and the area of less than a kilometer "
+             "around my home to walk around")
+    st.write("Average distance travelled by day during the containment", round(year['2020']['APRIL']['Distance'].mean()))
+    st.write("Average distance travelled by day before the containment", round(int(distance_mean(['2018', '2019'],
+                                                     ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))))
 
-#intro()
-#high_school_part()
-#university_part()
+intro()
+high_school_part()
+university_part()
 covid_pandemic()
 
 #st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
