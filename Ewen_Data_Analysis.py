@@ -5,7 +5,7 @@ import plotly.express as px
 import pydeck as pdk
 import math
 
-path = "C:/Users/ebern/Desktop/GitHub/Data_Visualisation/Extracted_Google_Maps_Data"
+path = "Extracted_Google_Maps_Data"
 st.set_page_config(layout="wide")
 
 year = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None, "2020": None, "2021": None}
