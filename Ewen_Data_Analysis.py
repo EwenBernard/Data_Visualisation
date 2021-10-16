@@ -205,7 +205,7 @@ def draw_map(df):
         initial_view_state=pdk.ViewState(
             latitude=48.75,
             longitude=2.26,
-            zoom=13,
+            zoom=12,
             pitch=50,
         ),
         layers=[
@@ -381,11 +381,18 @@ def covid_pandemic():
     st.write("So during the lockdown I was at a deficit of", 264, "kilocalories spent per day. So over", 54,
              "days, a total of ", 54, " * ", 264, " = ", 14256, "kilocalories. Moreover, it is estimated that", 1,
              "kilo of fat for a man represents", 7000, "kilocalories")
-    st.write("According to these calculations I would have gained", 2.1, "kg during the confinement. "
-                                                                         "However, these estimates are not very precise and do not take into account the few sports sessions "
-                                                                         "I did and the food I ate. ")
+    st.write("According to these calculations I would have gained", 2.1, "kg during the confinement."
+             "However, these estimates are not very precise and do not take into account the few sports sessions"
+             "I did and the food I ate.")
     data_bar_plot_covid()
-    # covid_death
+    st.write("If we look at my travel history for the year", 2020, "and superimpose the death curve for the same year "
+             "in France rescale to my location data, we notice that they are perfectly correlated. "
+             "This is due to all the measures taken by the "
+             "government in order to slow down the epidemic. We notice that the months where I moved less are "
+             "April and November corresponding to the 2 confinements. I moved more in November, having a job "
+             "in a supermarket the weekend.")
+
+
 
 
 intro()
