@@ -3,8 +3,8 @@ import csv
 
 header = ['StartLocationLat', 'StartLocationLon', 'EndLocationLat', 'EndLocationLon', 'StartTime', 'EndTime', 'Distance', 'ActivityType']
 i = 0
-path = "C:/Users/ebern/Desktop/GitHub/Data_Visualisation/Takeout/Historique des positions/Semantic Location History"
-extractPath = "C:/Users/ebern/Desktop/GitHub/Data_Visualisation/Extracted_Meline_Google_Maps_Data"
+path = "Takeout/Historique des positions/Semantic Location History"
+extractPath = "Extracted_Google_Maps_Data"
 
 if not os.path.exists(extractPath):
     os.mkdir(extractPath)
@@ -18,7 +18,6 @@ if not os.path.exists(extractPath):
                     dataset = []
                     writer = csv.writer(f)
                     writer.writerow(header)
-                    #print(data.get("timelineObjects"))
                     timelineObjects = jsonData.get("timelineObjects")
                     for items in timelineObjects:
                         activitySegments = items.get("activitySegment")
@@ -36,8 +35,6 @@ if not os.path.exists(extractPath):
                                 dataset.append(data)
                     writer.writerows(dataset)
             print("Processed " + file)
-#print(intToString(i))
-
 
 
 

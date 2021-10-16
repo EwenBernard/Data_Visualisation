@@ -13,6 +13,8 @@ year_sum = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None
 total_year_sum = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None, "2020": None, "2021": None}
 month = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [], "AUGUST": [],
          "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
+covid_death = pd.read_csv("covid_death/covid_death_by_month.csv")
+covid_death = covid_death / 300
 year_range = []
 total_data_sum = 0
 
@@ -116,8 +118,31 @@ def data_bar_plot(cols_nb, year, scale=180):
         dict = {key_year: list(year_sum[key_year].keys()), 'Number of trips': list(year_sum[key_year].values())}
         fig = px.bar(dict, x=key_year, y='Number of trips')
         fig.update_layout(yaxis_range=[0, scale])
+        fig.update_layout({
+            'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+            'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
         cols[i - 1].plotly_chart(fig, use_container_width=True)
         i += 1
+
+
+def data_bar_plot_covid():
+    col1, col2, col3 = st.columns([1, 6, 1])
+    with col1:
+        st.write("")
+    with col2:
+        dict_2020 = {"2020": list(year_sum["2020"].keys()), 'Number of trips': list(year_sum["2020"].values())}
+        fig = px.line(x=dict_2020["2020"], y=covid_death.values.tolist(), width=1200, color=px.Constant("Covid death"),
+                      labels=dict(x="2020", color="Data"))
+        fig.add_bar(x=dict_2020["2020"], y=dict_2020['Number of trips'], name="Number of trips")
+        fig.update_layout({
+            'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+            'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        fig.update_yaxes(title='', visible=True, showticklabels=True)
+        st.plotly_chart(fig)
+    with col3:
+        st.write("")
 
 
 def convert_loc_data(data):
@@ -176,7 +201,7 @@ def get_university_data():
 
 def draw_map(df):
     st.pydeck_chart(pdk.Deck(
-        map_style='mapbox://styles/mapbox/light-v9',
+        map_style='mapbox://styles/mapbox/dark-v10',
         initial_view_state=pdk.ViewState(
             latitude=48.75,
             longitude=2.26,
@@ -226,7 +251,7 @@ def intro():
     year_range.append(list(year.keys())[0])
     year_range.append(list(year.keys())[len(list(year.keys())) - 1])
 
-    st.title('Ewen life from {0} to {1}'.format(year_range[0], year_range[1]))
+    st.title('Ewen life from {0} to {1} :sunglasses:'.format(year_range[0], year_range[1]))
     st.write(
         "The purpose of this presentation is to show how we can know many facets of a person's life just by "
         "analyzing their personal data. For this purpose we will process and analyze my personal data, "
@@ -234,7 +259,12 @@ def intro():
     st.write("This presentation has been designed to be dynamically updated if the data is updated.")
     st.write("Total number of location data : ", total_data_sum)
     sum_dict = {"Years": list(total_year_sum.keys()), 'Number of Datas': list(total_year_sum.values())}
-    st.plotly_chart(px.bar(sum_dict, x="Years", y='Number of Datas'), use_container_width=True)
+    fig = px.bar(sum_dict, x="Years", y='Number of Datas')
+    fig.update_layout({
+        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+    })
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def high_school_part():
@@ -301,19 +331,67 @@ def covid_pandemic():
     st.title("Covid Pandemic")
     st.write("By the end of 2019, the covid-19 virus affects the entire planet. We observe more and more contamination "
              "until the first containment that lasted from March 17 to May 11, 2020 in France. ")
+    st.write("")
     draw_map(pd.DataFrame.from_dict(get_month_loc_data(year['2020']['APRIL'])))
-    st.write("the only places I went during this period were the supermarkets and the area of less than a kilometer "
+    st.write("")
+    st.write("The only places I went during this period were the supermarkets and the area of less than a kilometer "
              "around my home to walk around")
-    st.write("Average distance travelled by day during the containment", round(year['2020']['APRIL']['Distance'].mean()))
-    st.write("Average distance travelled by day before the containment", round(int(distance_mean(['2018', '2019'],
-                                                     ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))))
+    avg_dict = {"Average distance by day": ["Before the containment", "During the containment"],
+                'Distance in meter': [round(int(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER",
+                                                                                 "OCTOBER", 'NOVEMBER', 'DECEMBER']))),
+                                      round(year['2020']['APRIL']['Distance'].mean())]}
+    cols1, cols2, cols3 = st.columns([1, 6, 1])
+    with cols1:
+        st.write("")
+    with cols2:
+        fig = px.bar(avg_dict, x="Average distance by day", y='Distance in meter', text='Distance in meter', width=1200)
+        fig.update_layout({
+            'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+            'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        st.plotly_chart(fig)
+    with cols3:
+        st.write("")
+
+    st.write("The multiplication factor between the distance traveled before the containment and during the "
+             "containment is",
+             round(int(distance_mean(['2018', '2019'],
+                                     ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])) /
+                   year['2020']['APRIL']['Distance'].mean(), 1))
+    st.write("However, the", 1607, "m covered per day during the confinement were done on foot. If we consider that a "
+                                   "man spends", 60,
+             "kilocalories per km walked and that one hour of low activity is given "
+             "by the Metabolic Equivalent of Task (MET) formula: ")
+    st.latex(r'''MET = 1kcal * weight = 1 * 75 = 75 kcal/h''')
+    st.write("1 hour of sleep is", 0.9, "MET. If we consider a typical day during confinement with", 8,
+             "hours of sleep,", 16, "hours of low activity period and", 1.6, "km of walking we obtain : ")
+    col1, col2, col3 = st.columns([1, 6, 1])
+    with col1:
+        st.write("")
+    with col2:
+        cal_dict = {"Kilo Calories": [1836, 2100], "Calories burn": ["In containment", "Average for an healthy man"]}
+        fig = px.bar(cal_dict, x="Calories burn", y='Kilo Calories', text='Kilo Calories', width=1200)
+        fig.update_layout({
+            'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+            'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        st.plotly_chart(fig)
+    with col3:
+        st.write("")
+    st.write("So during the lockdown I was at a deficit of", 264, "kilocalories spent per day. So over", 54,
+             "days, a total of ", 54, " * ", 264, " = ", 14256, "kilocalories. Moreover, it is estimated that", 1,
+             "kilo of fat for a man represents", 7000, "kilocalories")
+    st.write("According to these calculations I would have gained", 2.1, "kg during the confinement. "
+                                                                         "However, these estimates are not very precise and do not take into account the few sports sessions "
+                                                                         "I did and the food I ate. ")
+    data_bar_plot_covid()
+    # covid_death
+
 
 intro()
 high_school_part()
 university_part()
 covid_pandemic()
 
-#st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
-#st.write(year['2020']['APRIL']["Distance"].mean())
-
-
+# st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
+# st.write(year['2020']['APRIL']["Distance"].mean())
