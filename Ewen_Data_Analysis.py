@@ -216,7 +216,7 @@ def draw_ml_map(df):
         initial_view_state=pdk.ViewState(
             latitude=48.75,
             longitude=2.26,
-            zoom=12,
+            zoom=11,
             pitch=50,
         ),
         layers=[
@@ -275,7 +275,7 @@ def get_current_month():
 def predict_loc_with_date():
     return_dict = {'percentage': [], 'lat': [], 'lon': []}
     features = ['EndLocationLat', 'EndLocationLon']
-    data = date_loc_dict['Monday'][features]
+    data = date_loc_dict['Wednesday'][features]
     kmeans = KMeans(
         init="random",
         n_clusters=8,
@@ -285,12 +285,12 @@ def predict_loc_with_date():
     )
     kmeans.fit(data)
     labels = kmeans.labels_
-    date_loc_dict['Monday']['cluster'] = labels
-    count = date_loc_dict['Monday']['cluster'].value_counts()
+    date_loc_dict['Wednesday']['cluster'] = labels
+    count = date_loc_dict['Wednesday']['cluster'].value_counts()
     clusters_number = count.index.tolist()[:3]
     return_dict['percentage'] = proportion(count.tolist())[:3]
     for index in clusters_number:
-        separated_cluster = date_loc_dict['Monday'].loc[date_loc_dict['Monday']['cluster'] == index]
+        separated_cluster = date_loc_dict['Wednesday'].loc[date_loc_dict['Wednesday']['cluster'] == index]
         return_dict['lat'].append(convert_loc_data(separated_cluster['EndLocationLat'].mean()))
         return_dict['lon'].append(convert_loc_data(separated_cluster['EndLocationLon'].mean()))
     return return_dict
@@ -491,11 +491,11 @@ def covid_pandemic():
                                                                    "in a supermarket the weekend.")
 
 def prediction_part():
+    st.title("K-Means Predictive Next Locations Algorithm")
     prediction = predict_loc_with_date()
     prediction["color_r"] = [255, 0, 0]
     prediction["color_g"] = [0, 255, 0]
     prediction["color_b"] = [0, 0, 255]
-    st.write(prediction)
     address = []
     for i in range(3):
         address.append(get_address_by_location(prediction['lat'][i], prediction['lon'][i]))
