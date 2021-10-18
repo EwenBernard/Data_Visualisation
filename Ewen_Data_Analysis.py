@@ -226,7 +226,7 @@ def draw_ml_map(df):
                       get_position='[lon, lat]',
                       get_elevation='[percentage]',
                       radius=200,
-                      getFillColor= '[color_r, color_g, color_b]',
+                      getFillColor='[color_r, color_g, color_b]',
                       elevation_scale=100,
                       elevation_range=[0, 100],
                       pickable=True,
@@ -303,8 +303,12 @@ def predict_loc_with_date(option):
     return_dict['percentage'] = proportion(count.tolist())[:3]
     for index in clusters_number:
         separated_cluster = date_loc_dict[option].loc[date_loc_dict[option]['cluster'] == index]
-        return_dict['lat'].append(convert_loc_data(separated_cluster['EndLocationLat'].mean()))
-        return_dict['lon'].append(convert_loc_data(separated_cluster['EndLocationLon'].mean()))
+        if option == 'Sunday':
+            return_dict['lat'].append(separated_cluster['EndLocationLat'].mean())
+            return_dict['lon'].append(separated_cluster['EndLocationLon'].mean())
+        else:
+            return_dict['lat'].append(convert_loc_data(separated_cluster['EndLocationLat'].mean()))
+            return_dict['lon'].append(convert_loc_data(separated_cluster['EndLocationLon'].mean()))
     return return_dict
 
 
@@ -374,7 +378,6 @@ def intro():
     st.plotly_chart(fig, use_container_width=True)
 
 
-@st.cache
 def high_school_part():
     st.title("High School years")
     st.write(
@@ -403,7 +406,6 @@ def high_school_part():
     st.plotly_chart(fig, use_container_width=True)
 
 
-@st.cache
 def university_part():
     st.title("University Years")
     st.write(
@@ -427,16 +429,16 @@ def university_part():
     st.write("My places of travel remain however almost the same, my friends still living in the same places. You can "
              "see a line going from my house to the school. This line represents the trip by bus + rer B that I make "
              "every morning and every evening to go to school.")
-    st.write("Average distance travelled per trip in meters :")
+    st.metric(label="", value="Average distance travelled per trip in meters", delta="+1199m")
     st.write("Before August 2018:",
              int(distance_mean(['2017', '2018'], ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY'])))
     st.write("After August 2018:", int(distance_mean(['2018', '2019'],
                                                      ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])))
+
     st.write("There is a clear increase in the average distance travelled per trip. "
              "This is due to the fact that my school is much further from my home than my high school")
 
 
-@st.cache
 def covid_pandemic():
     st.title("Covid Pandemic")
     st.write("By the end of 2019, the covid-19 virus affects the entire planet. We observe more and more contamination "
@@ -518,7 +520,8 @@ def prediction_part():
              "We can check the robustness of the prediction thanks to the confidence indicator."
              " The pair of values longitude / latitude returned is then converted into real address "
              "thanks to the Nominatim api")
-    option = st.selectbox('Select day you want to predict', ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))
+    option = st.selectbox('Select day you want to predict',
+                          ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))
     st.write('You selected:', option)
 
     prediction = predict_loc_with_date(option)
@@ -528,7 +531,6 @@ def prediction_part():
     address = []
     for i in range(3):
         address.append(get_address_by_location(prediction['lat'][i], prediction['lon'][i]))
-
     draw_ml_map(pd.DataFrame.from_dict(prediction))
     st.write("First predicted place (Red): ", address[0].get('display_name'))
     st.write("Confidence :", prediction["percentage"][0], " %")
@@ -537,13 +539,9 @@ def prediction_part():
     st.write("Third predicted place (Blue):", address[2].get('display_name'))
     st.write("Confidence :", prediction["percentage"][2], " %")
 
-
-
 init()
 intro()
 high_school_part()
 university_part()
 covid_pandemic()
 prediction_part()
-
-
