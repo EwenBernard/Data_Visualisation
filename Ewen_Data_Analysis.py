@@ -1,44 +1,32 @@
+import time
+from geopy.geocoders import Nominatim
 import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
 import pydeck as pdk
 import math
+from sklearn.cluster import KMeans, AgglomerativeClustering
 
 path = "Extracted_Google_Maps_Data"
 st.set_page_config(layout="wide")
 
+app = Nominatim(user_agent="tutorial")
 year = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None, "2020": None, "2021": None}
 year_sum = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None, "2020": None, "2021": None}
 total_year_sum = {"2015": None, "2016": None, "2017": None, "2018": None, "2019": None, "2020": None, "2021": None}
 month = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [], "AUGUST": [],
          "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
+days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+date_loc_dict = {'Monday': [], 'Tuesday': [], 'Wednesday': [], 'Thursday': [], 'Friday': [], 'Saturday': [],
+                 'Sunday': []}
 covid_death = pd.read_csv("covid_death/covid_death_by_month.csv")
 covid_death = covid_death / 300
 year_range = []
 total_data_sum = 0
-
-for folder in os.listdir(path):
-    temp_year_sum = 0
-    temp_month = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [],
-                  "AUGUST": [], "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
-    month_sum = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [],
-                 "AUGUST": [], "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
-    for file in os.listdir(path + "/" + folder):
-        for key in month:
-            if key in file:
-                read = pd.read_csv(path + "/" + folder + "/" + file)
-                nb_data = len(read.axes[0]) * len(read.axes[1])
-                total_data_sum += nb_data
-                temp_year_sum += nb_data
-                temp_month[key] = read
-                month_sum[key] = len(read.index)
-            if type(month_sum[key]) is list:
-                month_sum[key] = 0
-    total_year_sum[folder] = temp_year_sum
-    year_sum[folder] = month_sum
-    year[folder] = temp_month
-
+color_count = 0
+current_year = None
+current_month = None
 
 def percentage(count_dict):
     return_dict = {"key": list(count_dict.keys()), "percentage": []}
@@ -201,7 +189,7 @@ def get_university_data():
 
 def draw_map(df):
     st.pydeck_chart(pdk.Deck(
-        map_style='mapbox://styles/mapbox/dark-v10',
+        map_style='mapbox://styles/mapbox/satellite-v9',
         initial_view_state=pdk.ViewState(
             latitude=48.75,
             longitude=2.26,
@@ -218,13 +206,31 @@ def draw_map(df):
                       pickable=True,
                       extruded=True,
                       ),
-            pdk.Layer(
-                'ScatterplotLayer',
-                data=df,
-                get_position='[lon, lat]',
-                get_color='[200, 30, 0, 160]',
-                get_radius=200,
-            ),
+        ],
+    ))
+
+
+def draw_ml_map(df):
+    st.pydeck_chart(pdk.Deck(
+        map_style='mapbox://styles/mapbox/satellite-v9',
+        initial_view_state=pdk.ViewState(
+            latitude=48.75,
+            longitude=2.26,
+            zoom=12,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer('ColumnLayer',
+                      data=df,
+                      get_position='[lon, lat]',
+                      get_elevation='[percentage]',
+                      radius=200,
+                      getFillColor= '[color_r, color_g, color_b]',
+                      elevation_scale=100,
+                      elevation_range=[0, 100],
+                      pickable=True,
+                      extruded=True,
+                      ),
         ],
     ))
 
@@ -247,6 +253,93 @@ def distance_mean(years, month_list):
     return sum(temp) / len(temp)
 
 
+def initialize_date_loc():
+    for day in days:
+        date_loc_dict[day] = year[current_year][current_month].loc[
+            year[current_year][current_month]['StartTime'].dt.day_name() == day]
+    for key in ["EndLocationLon", "EndLocationLat", "StartLocationLon", "StartLocationLat"]:
+        date_loc_dict[day][key] = convert_loc_data(date_loc_dict[day][key])
+    for date in ["StartTime", "EndTime"]:
+        date_loc_dict[day][date] = date_loc_dict[day][date].dt.date
+
+
+def get_current_month():
+    month = "JANUARY"
+    for key in list(year[current_year].keys()):
+        if len(year[current_year][key]) == 0:
+            break
+        month = key
+    return month
+
+
+def predict_loc_with_date():
+    return_dict = {'percentage': [], 'lat': [], 'lon': []}
+    features = ['EndLocationLat', 'EndLocationLon']
+    data = date_loc_dict['Monday'][features]
+    kmeans = KMeans(
+        init="random",
+        n_clusters=8,
+        n_init=10,
+        max_iter=300,
+        random_state=42
+    )
+    kmeans.fit(data)
+    labels = kmeans.labels_
+    date_loc_dict['Monday']['cluster'] = labels
+    count = date_loc_dict['Monday']['cluster'].value_counts()
+    clusters_number = count.index.tolist()[:3]
+    return_dict['percentage'] = proportion(count.tolist())[:3]
+    for index in clusters_number:
+        separated_cluster = date_loc_dict['Monday'].loc[date_loc_dict['Monday']['cluster'] == index]
+        return_dict['lat'].append(convert_loc_data(separated_cluster['EndLocationLat'].mean()))
+        return_dict['lon'].append(convert_loc_data(separated_cluster['EndLocationLon'].mean()))
+    return return_dict
+
+
+def proportion(input_list):
+    return [value * 100 / sum(input_list) for value in input_list]
+
+
+def get_address_by_location(latitude, longitude, language="en"):
+    coordinates = f"{latitude}, {longitude}"
+    time.sleep(1)
+    try:
+        return app.reverse(coordinates, language=language).raw
+    except:
+        return get_address_by_location(latitude, longitude)
+
+
+def init():
+    global total_data_sum
+    global current_year
+    global current_month
+    for folder in os.listdir(path):
+        temp_year_sum = 0
+        temp_month = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [],
+                      "AUGUST": [], "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
+        month_sum = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [],
+                     "AUGUST": [], "SEPTEMBER": [], "OCTOBER": [], "NOVEMBER": [], "DECEMBER": []}
+        for file in os.listdir(path + "/" + folder):
+            for key in month:
+                if key in file:
+                    read = pd.read_csv(path + "/" + folder + "/" + file)
+                    read['StartTime'] = pd.to_datetime(read['StartTime'], unit='ms')
+                    read['EndTime'] = pd.to_datetime(read['EndTime'], unit='ms')
+                    nb_data = len(read.axes[0]) * len(read.axes[1])
+                    total_data_sum += nb_data
+                    temp_year_sum += nb_data
+                    temp_month[key] = read
+                    month_sum[key] = len(read.index)
+                if type(month_sum[key]) is list:
+                    month_sum[key] = 0
+        total_year_sum[folder] = temp_year_sum
+        year_sum[folder] = month_sum
+        year[folder] = temp_month
+    current_year = list(year.keys())[len(list(year.keys())) - 1]
+    current_month = get_current_month()
+    initialize_date_loc()
+
+
 def intro():
     year_range.append(list(year.keys())[0])
     year_range.append(list(year.keys())[len(list(year.keys())) - 1])
@@ -256,7 +349,7 @@ def intro():
         "The purpose of this presentation is to show how we can know many facets of a person's life just by "
         "analyzing their personal data. For this purpose we will process and analyze my personal data, "
         "in this case my google locations datas.")
-    st.write("This presentation has been designed to be dynamically updated if the data is updated.")
+    st.write('This presentation has been designed to be dynamically updated if the data is updated. (Last Data Update {0} - {1}).'.format(current_month, current_year))
     st.write("Total number of location data : ", total_data_sum)
     sum_dict = {"Years": list(total_year_sum.keys()), 'Number of Datas': list(total_year_sum.values())}
     fig = px.bar(sum_dict, x="Years", y='Number of Datas')
@@ -271,7 +364,7 @@ def high_school_part():
     st.title("High School years")
     st.write(
         "Data location has been collected since August 2015, date of purchase of a phone running recent version of "
-        "android (android 5). Before December 2017 we notice that few data have been collected.This is explained by "
+        "android (android 5). Before December 2017 we notice that few data have been collected. This is explained by "
         "the fact that I had at the time a phone plan with little data package (50mo) forcing me to disable the "
         "location the vast majority of the time.")
     st.write(
@@ -282,7 +375,7 @@ def high_school_part():
         "We notice that the point on the map where I went the most during these years is obviously my house in Antony "
         "in the 92 department. The second most frequented point is my high school located in Chatenay-Malabry")
     st.write(
-        "As I didn't have a driver's license yet, I mostly traveled on foot or by bike. It is noticeable that "
+        "It is noticeable that "
         "my trips remained within a rather small radius")
     draw_map(get_high_school_data())
     dict_temp = high_school_data_count()
@@ -352,12 +445,11 @@ def covid_pandemic():
         st.plotly_chart(fig)
     with cols3:
         st.write("")
-
-    st.write("The multiplication factor between the distance traveled before the containment and during the "
-             "containment is",
-             round(int(distance_mean(['2018', '2019'],
-                                     ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])) /
-                   year['2020']['APRIL']['Distance'].mean(), 1))
+    st.metric(label="", value="Distance traveled during the containment",
+              delta="-{}%".format(round(int(distance_mean(['2018', '2019'],
+                                                          ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER'])) /
+                                        year['2020']['APRIL']['Distance'].mean(), 1) * 100))
+    st.write("")
     st.write("However, the", 1607, "m covered per day during the confinement were done on foot. If we consider that a "
                                    "man spends", 60,
              "kilocalories per km walked and that one hour of low activity is given "
@@ -380,25 +472,49 @@ def covid_pandemic():
         st.write("")
     st.write("So during the lockdown I was at a deficit of", 264, "kilocalories spent per day. So over", 54,
              "days, a total of ", 54, " * ", 264, " = ", 14256, "kilocalories. Moreover, it is estimated that", 1,
-             "kilo of fat for a man represents", 7000, "kilocalories")
+             "kilo of fat for a man represents", 7000, "kilocalories ")
     st.write("According to these calculations I would have gained", 2.1, "kg during the confinement."
-             "However, these estimates are not very precise and do not take into account the few sports sessions"
-             "I did and the food I ate.")
+                                                                         "However, these estimates are not very "
+                                                                         "precise and do not take into account the "
+                                                                         "few sports sessions "
+                                                                         "I did and the food I ate.")
     data_bar_plot_covid()
     st.write("If we look at my travel history for the year", 2020, "and superimpose the death curve for the same year "
-             "in France rescale to my location data, we notice that they are perfectly correlated. "
-             "This is due to all the measures taken by the "
-             "government in order to slow down the epidemic. We notice that the months where I moved less are "
-             "April and November corresponding to the 2 confinements. I moved more in November, having a job "
-             "in a supermarket the weekend.")
+                                                                   "in France rescale to my location data, we notice "
+                                                                   "that they are perfectly correlated. "
+                                                                   "This is due to all the measures taken by the "
+                                                                   "government in order to slow down the epidemic. We "
+                                                                   "notice that the months where I moved less are "
+                                                                   "April and November corresponding to the 2 "
+                                                                   "confinements. I moved more in December, "
+                                                                   "having a job "
+                                                                   "in a supermarket the weekend.")
+
+def prediction_part():
+    prediction = predict_loc_with_date()
+    prediction["color_r"] = [255, 0, 0]
+    prediction["color_g"] = [0, 255, 0]
+    prediction["color_b"] = [0, 0, 255]
+    st.write(prediction)
+    address = []
+    for i in range(3):
+        address.append(get_address_by_location(prediction['lat'][i], prediction['lon'][i]))
+
+    draw_ml_map(pd.DataFrame.from_dict(prediction))
+    st.write("First predicted place (Red): ", address[0].get('display_name'))
+    st.write("Confidence :", prediction["percentage"][0], " %")
+    st.write("Second predicted place (Green):", address[1].get('display_name'))
+    st.write("Confidence :", prediction["percentage"][1], " %")
+    st.write("Third predicted place (Blue):", address[2].get('display_name'))
+    st.write("Confidence :", prediction["percentage"][2], " %")
 
 
 
-
+init()
 intro()
-high_school_part()
-university_part()
-covid_pandemic()
+# high_school_part()
+# university_part()
+#covid_pandemic()
+prediction_part()
 
-# st.write(distance_mean(['2018', '2019'], ['AUGUST', "SEPTEMBER", "OCTOBER", 'NOVEMBER', 'DECEMBER']))
-# st.write(year['2020']['APRIL']["Distance"].mean())
+
