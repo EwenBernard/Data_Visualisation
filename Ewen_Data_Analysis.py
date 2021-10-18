@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import pydeck as pdk
 import math
-from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.cluster import KMeans
 
 path = "Extracted_Google_Maps_Data"
 st.set_page_config(layout="wide")
@@ -27,6 +27,7 @@ total_data_sum = 0
 color_count = 0
 current_year = None
 current_month = None
+
 
 def percentage(count_dict):
     return_dict = {"key": list(count_dict.keys()), "percentage": []}
@@ -272,10 +273,21 @@ def get_current_month():
     return month
 
 
-def predict_loc_with_date():
+def get_last_month():
+    month = "JANUARY"
+    for i, key in enumerate(list(year[current_year].keys())):
+        if len(year[current_year][key]) == 0 and key == 'FEBRUARY':
+            return "DECEMBER"
+        elif len(year[current_year][key]) == 0:
+            return list(year[current_year].keys())[i - 2]
+        month = key
+    return month
+
+
+def predict_loc_with_date(option):
     return_dict = {'percentage': [], 'lat': [], 'lon': []}
     features = ['EndLocationLat', 'EndLocationLon']
-    data = date_loc_dict['Wednesday'][features]
+    data = date_loc_dict[option][features]
     kmeans = KMeans(
         init="random",
         n_clusters=8,
@@ -285,12 +297,12 @@ def predict_loc_with_date():
     )
     kmeans.fit(data)
     labels = kmeans.labels_
-    date_loc_dict['Wednesday']['cluster'] = labels
-    count = date_loc_dict['Wednesday']['cluster'].value_counts()
+    date_loc_dict[option]['cluster'] = labels
+    count = date_loc_dict[option]['cluster'].value_counts()
     clusters_number = count.index.tolist()[:3]
     return_dict['percentage'] = proportion(count.tolist())[:3]
     for index in clusters_number:
-        separated_cluster = date_loc_dict['Wednesday'].loc[date_loc_dict['Wednesday']['cluster'] == index]
+        separated_cluster = date_loc_dict[option].loc[date_loc_dict[option]['cluster'] == index]
         return_dict['lat'].append(convert_loc_data(separated_cluster['EndLocationLat'].mean()))
         return_dict['lon'].append(convert_loc_data(separated_cluster['EndLocationLon'].mean()))
     return return_dict
@@ -313,6 +325,7 @@ def init():
     global total_data_sum
     global current_year
     global current_month
+    global last_month
     for folder in os.listdir(path):
         temp_year_sum = 0
         temp_month = {"JANUARY": [], "FEBRUARY": [], "MARCH": [], "APRIL": [], "MAY": [], "JUNE": [], "JULY": [],
@@ -349,7 +362,8 @@ def intro():
         "The purpose of this presentation is to show how we can know many facets of a person's life just by "
         "analyzing their personal data. For this purpose we will process and analyze my personal data, "
         "in this case my google locations datas.")
-    st.write('This presentation has been designed to be dynamically updated if the data is updated. (Last Data Update {0} - {1}).'.format(current_month, current_year))
+    st.write('This presentation has been designed to be dynamically updated if the data is updated. '
+             '(Last Data Update {0} - {1}).'.format(current_month, current_year))
     st.write("Total number of location data : ", total_data_sum)
     sum_dict = {"Years": list(total_year_sum.keys()), 'Number of Datas': list(total_year_sum.values())}
     fig = px.bar(sum_dict, x="Years", y='Number of Datas')
@@ -360,6 +374,7 @@ def intro():
     st.plotly_chart(fig, use_container_width=True)
 
 
+@st.cache
 def high_school_part():
     st.title("High School years")
     st.write(
@@ -388,6 +403,7 @@ def high_school_part():
     st.plotly_chart(fig, use_container_width=True)
 
 
+@st.cache
 def university_part():
     st.title("University Years")
     st.write(
@@ -420,6 +436,7 @@ def university_part():
              "This is due to the fact that my school is much further from my home than my high school")
 
 
+@st.cache
 def covid_pandemic():
     st.title("Covid Pandemic")
     st.write("By the end of 2019, the covid-19 virus affects the entire planet. We observe more and more contamination "
@@ -490,9 +507,21 @@ def covid_pandemic():
                                                                    "having a job "
                                                                    "in a supermarket the weekend.")
 
+
 def prediction_part():
-    st.title("K-Means Predictive Next Locations Algorithm")
-    prediction = predict_loc_with_date()
+    st.title("Prediction of my future trips according to the last month (Currently : {0} - {1})"
+             .format(get_last_month(), current_year))
+    st.write("I created a machine learning algorithm (K-means) that allows me to determine, thanks to the localization"
+             " datas of the previous month (in form of longitude and latitude), which will be my next trips "
+             "according to the day of the week."
+             " The algorithm returns the 3 places most likely to be visited on that day of the week. "
+             "We can check the robustness of the prediction thanks to the confidence indicator."
+             " The pair of values longitude / latitude returned is then converted into real address "
+             "thanks to the Nominatim api")
+    option = st.selectbox('Select day you want to predict', ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))
+    st.write('You selected:', option)
+
+    prediction = predict_loc_with_date(option)
     prediction["color_r"] = [255, 0, 0]
     prediction["color_g"] = [0, 255, 0]
     prediction["color_b"] = [0, 0, 255]
@@ -512,9 +541,9 @@ def prediction_part():
 
 init()
 intro()
-# high_school_part()
-# university_part()
-#covid_pandemic()
+high_school_part()
+university_part()
+covid_pandemic()
 prediction_part()
 
 
